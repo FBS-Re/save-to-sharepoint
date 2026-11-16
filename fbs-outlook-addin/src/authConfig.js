@@ -8,8 +8,8 @@
   Everything else is standard.
 */
 window.FBS_AUTH = {
-  CLIENT_ID: "REPLACE-WITH-APPLICATION-CLIENT-ID",
-  TENANT_ID: "REPLACE-WITH-DIRECTORY-TENANT-ID",
+  CLIENT_ID: "23c21ada-3801-475d-bf4b-359eeff5ebff",
+  TENANT_ID: "76807519-6b03-4301-ae6c-3e4d68404d51",
 
   // Microsoft Graph permissions the add-in asks for (delegated – acts as the signed-in user)
   SCOPES: [
