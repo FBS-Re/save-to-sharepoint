@@ -2,7 +2,7 @@
 <!--
   FBS Re – Save to SharePoint (Outlook add-in manifest)
   Hosted on GitHub Pages: https://fbs-re.github.io/save-to-sharepoint/fbs-outlook-addin
-  Id GUID is stable across updates.
+  Id GUID is stable across updates. VersionOverrides v1.1 enables the pinnable task pane.
 -->
 <OfficeApp
   xmlns="http://schemas.microsoft.com/office/appforoffice/1.1"
@@ -12,7 +12,7 @@
   xsi:type="MailApp">
 
   <Id>e3973525-8e95-45c5-82d5-a6095f5aa22f</Id>
-  <Version>1.1.0.0</Version>
+  <Version>1.2.0.0</Version>
   <ProviderName>FBS Reinsurance Limited</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
   <DisplayName DefaultValue="Save to SharePoint"/>
@@ -75,7 +75,6 @@
                   </Icon>
                   <Action xsi:type="ShowTaskpane">
                     <SourceLocation resid="taskpaneUrl"/>
-                    <SupportsPinning>true</SupportsPinning>
                   </Action>
                 </Control>
               </Group>
@@ -102,5 +101,61 @@
         <bt:String id="buttonTip" DefaultValue="Save this email's attachments into the right FBS Re department library, with the required details."/>
       </bt:LongStrings>
     </Resources>
+
+    <VersionOverrides xmlns="http://schemas.microsoft.com/office/mailappversionoverrides/1.1" xsi:type="VersionOverridesV1_1">
+      <Requirements>
+        <bt:Sets DefaultMinVersion="1.8">
+          <bt:Set Name="Mailbox"/>
+        </bt:Sets>
+      </Requirements>
+
+      <Hosts>
+        <Host xsi:type="MailHost">
+          <DesktopFormFactor>
+            <ExtensionPoint xsi:type="MessageReadCommandSurface">
+              <OfficeTab id="TabDefault">
+                <Group id="fbsReGroup">
+                  <Label resid="groupLabel"/>
+                  <Control xsi:type="Button" id="openSaveToSpoButton">
+                    <Label resid="buttonLabel"/>
+                    <Supertip>
+                      <Title resid="buttonLabel"/>
+                      <Description resid="buttonTip"/>
+                    </Supertip>
+                    <Icon>
+                      <bt:Image size="16" resid="icon16"/>
+                      <bt:Image size="32" resid="icon32"/>
+                      <bt:Image size="80" resid="icon80"/>
+                    </Icon>
+                    <Action xsi:type="ShowTaskpane">
+                      <SourceLocation resid="taskpaneUrl"/>
+                      <SupportsPinning>true</SupportsPinning>
+                    </Action>
+                  </Control>
+                </Group>
+              </OfficeTab>
+            </ExtensionPoint>
+          </DesktopFormFactor>
+        </Host>
+      </Hosts>
+
+      <Resources>
+        <bt:Images>
+          <bt:Image id="icon16" DefaultValue="https://fbs-re.github.io/save-to-sharepoint/fbs-outlook-addin/assets/icon-16.png"/>
+          <bt:Image id="icon32" DefaultValue="https://fbs-re.github.io/save-to-sharepoint/fbs-outlook-addin/assets/icon-32.png"/>
+          <bt:Image id="icon80" DefaultValue="https://fbs-re.github.io/save-to-sharepoint/fbs-outlook-addin/assets/icon-80.png"/>
+        </bt:Images>
+        <bt:Urls>
+          <bt:Url id="taskpaneUrl" DefaultValue="https://fbs-re.github.io/save-to-sharepoint/fbs-outlook-addin/src/taskpane.html"/>
+        </bt:Urls>
+        <bt:ShortStrings>
+          <bt:String id="groupLabel" DefaultValue="FBS Re"/>
+          <bt:String id="buttonLabel" DefaultValue="Save to SharePoint"/>
+        </bt:ShortStrings>
+        <bt:LongStrings>
+          <bt:String id="buttonTip" DefaultValue="Save this email's attachments into the right FBS Re department library, with the required details."/>
+        </bt:LongStrings>
+      </Resources>
+    </VersionOverrides>
   </VersionOverrides>
 </OfficeApp>
