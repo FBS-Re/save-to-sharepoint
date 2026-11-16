@@ -6,7 +6,7 @@
   <title>Sign in — FBS Re</title>
   <script src="https://appsforoffice.microsoft.com/lib/1.1/hosted/office.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3.10.0/lib/msal-browser.min.js"></script>
-  <script src="authConfig.js?v=3"></script>
+  <script src="authConfig.js?v=4"></script>
   <style>
     body{font-family:'Segoe UI',Arial,Helvetica,sans-serif;color:#14264F;padding:28px;text-align:center}
     .spin{display:inline-block;width:18px;height:18px;border:3px solid #c9d3e6;border-top-color:#1B3A6B;border-radius:50%;animation:sp .7s linear infinite;vertical-align:-3px;margin-right:8px}
@@ -18,8 +18,8 @@
   <p id="m"><span class="spin"></span>Connecting to Microsoft sign-in…</p>
   <script>
     // Runs inside an Office dialog (a real window, so redirect-based sign-in works).
-    // On success it caches tokens in this origin's localStorage (shared with the
-    // task pane) and messages the parent task pane.
+    // The dialog does NOT share storage with the task pane, so it signs in, gets an
+    // access token for the requested scopes, and sends the TOKEN back to the pane.
     Office.onReady(function () {
       var msg = document.getElementById("m");
       function send(o) { try { Office.context.ui.messageParent(JSON.stringify(o)); } catch (e) {} }
@@ -31,6 +31,8 @@
             send({ status: "error", message: "MSAL library failed to load" });
             return;
           }
+          var params = new URLSearchParams(window.location.search);
+          var scopes = (params.get("scopes") || window.FBS_AUTH.SCOPES.join(" ")).split(" ").filter(Boolean);
           var redirectUri = window.location.origin + window.location.pathname; // this page
           var pca = new msal.PublicClientApplication({
             auth: {
@@ -42,22 +44,43 @@
           });
           await pca.initialize();
 
-          // Returning from the Microsoft redirect?
+          // Returning from a Microsoft redirect? Hand the token straight back.
           var resp = await pca.handleRedirectPromise();
-          if (resp && resp.account) {
+          if (resp && resp.accessToken) {
             pca.setActiveAccount(resp.account);
-            send({ status: "success", username: resp.account.username });
+            send({
+              status: "success",
+              token: resp.accessToken,
+              username: resp.account && resp.account.username,
+              expiresOn: resp.expiresOn ? new Date(resp.expiresOn).getTime() : 0
+            });
             return;
           }
-          // Already signed in (cache shared with task pane)?
+
+          // Already signed in (session cached in THIS dialog's storage)?
           var accts = pca.getAllAccounts();
           if (accts.length) {
-            send({ status: "success", username: accts[0].username });
-            return;
+            pca.setActiveAccount(accts[0]);
+            try {
+              var silent = await pca.acquireTokenSilent({ scopes: scopes, account: accts[0] });
+              send({
+                status: "success",
+                token: silent.accessToken,
+                username: accts[0].username,
+                expiresOn: silent.expiresOn ? new Date(silent.expiresOn).getTime() : 0
+              });
+              return;
+            } catch (se) {
+              // These scopes need an interactive step — do it, then we return above.
+              msg.textContent = "Redirecting to Microsoft…";
+              await pca.acquireTokenRedirect({ scopes: scopes, account: accts[0] });
+              return;
+            }
           }
-          // First load → start interactive sign-in.
+
+          // First time -> interactive sign-in.
           msg.textContent = "Redirecting to Microsoft sign-in…";
-          await pca.loginRedirect({ scopes: window.FBS_AUTH.SCOPES, prompt: "select_account" });
+          await pca.loginRedirect({ scopes: scopes, prompt: "select_account" });
         } catch (e) {
           msg.className = "err";
           msg.textContent = "Sign-in error: " + (e && e.message ? e.message : e);
