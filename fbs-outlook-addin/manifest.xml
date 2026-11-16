@@ -12,7 +12,7 @@
   xsi:type="MailApp">
 
   <Id>e3973525-8e95-45c5-82d5-a6095f5aa22f</Id>
-  <Version>1.0.0.0</Version>
+  <Version>1.1.0.0</Version>
   <ProviderName>FBS Reinsurance Limited</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
   <DisplayName DefaultValue="Save to SharePoint"/>
@@ -75,6 +75,7 @@
                   </Icon>
                   <Action xsi:type="ShowTaskpane">
                     <SourceLocation resid="taskpaneUrl"/>
+                    <SupportsPinning>true</SupportsPinning>
                   </Action>
                 </Control>
               </Group>
