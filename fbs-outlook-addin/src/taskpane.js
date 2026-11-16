@@ -14,13 +14,10 @@
 
   Office.onReady(function (info) {
     if (info.host !== Office.HostType.Outlook) return;
-    msalApp = new msal.PublicClientApplication(window.FBS_MSAL_CONFIG);
-    msalApp.initialize().then(function () {
-      // already signed in from a previous session?
-      const accts = msalApp.getAllAccounts();
-      if (accts.length) { account = accts[0]; onSignedIn(); }
-      wire();
-    });
+    // Wire the buttons FIRST so the UI always responds, even if MSAL is slow
+    // to load or the sign-in library is blocked by the network.
+    wire();
+    initMsal();
   });
 
   function wire() {
@@ -31,11 +28,32 @@
     $("saveBtn").onclick = onSave;
   }
 
+  // Load the Microsoft sign-in library in the background. If it didn't load
+  // (e.g. the network blocked the CDN), say so clearly instead of failing silently.
+  async function initMsal() {
+    try {
+      if (typeof msal === "undefined" || !msal.PublicClientApplication) {
+        setStatus("Couldn't load the Microsoft sign-in library — your network may be blocking it. Please check your connection and reopen the add-in.", "err");
+        return;
+      }
+      msalApp = new msal.PublicClientApplication(window.FBS_MSAL_CONFIG);
+      await msalApp.initialize();
+      const accts = msalApp.getAllAccounts();
+      if (accts.length) { account = accts[0]; msalApp.setActiveAccount(account); onSignedIn(); }
+    } catch (e) {
+      setStatus("Sign-in setup failed: " + (e && e.message ? e.message : e), "err");
+    }
+  }
+
   // ---------- auth ----------
   // Popups are blocked inside the Outlook add-in sandbox, so sign-in runs in an
   // Office dialog (auth-dialog.html). It signs in, caches tokens in this same
   // origin's localStorage, and messages us back; we then read the account here.
   function signIn() {
+    if (!msalApp) {
+      setStatus("Sign-in is still getting ready — wait a second and click again. If this keeps happening, your network may be blocking the Microsoft sign-in library.", "err");
+      return;
+    }
     setStatus('<span class="spin"></span>Opening sign-in…', "busy");
     const base = window.location.href.split("?")[0].replace(/[^/]*$/, "");
     const url = base + "auth-dialog.html";
