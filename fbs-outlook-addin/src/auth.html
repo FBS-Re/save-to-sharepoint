@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Signing in…</title>
+  <script src="https://alcdn.msauth.net/browser/3.10.0/js/msal-browser.min.js"></script>
+  <script src="authConfig.js"></script>
+</head>
+<body style="font-family:'Segoe UI',Arial,sans-serif;color:#14264F;padding:20px">
+  <p>Completing sign-in… you can close this window if it does not close automatically.</p>
+  <script>
+    // This page is the MSAL redirect target for the sign-in popup.
+    // msal-browser processes the response here and signals the main window.
+    (async function () {
+      try {
+        const pca = new msal.PublicClientApplication(window.FBS_MSAL_CONFIG);
+        await pca.initialize();
+        await pca.handleRedirectPromise();
+      } catch (e) {
+        document.body.innerHTML = "<p style='color:#c0392b'>Sign-in error: " + (e && e.message) + "</p>";
+      }
+    })();
+  </script>
+</body>
+</html>

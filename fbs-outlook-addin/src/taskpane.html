@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Save to SharePoint — FBS Re</title>
+
+  <!-- Office JavaScript API -->
+  <script src="https://appsforoffice.microsoft.com/lib/1.1/hosted/office.js"></script>
+  <!-- MSAL (Microsoft Authentication Library) for signing in to Microsoft Graph -->
+  <script src="https://alcdn.msauth.net/browser/3.10.0/js/msal-browser.min.js"></script>
+
+  <link rel="stylesheet" href="taskpane.css" />
+</head>
+<body>
+  <div id="app">
+    <header class="hdr">
+      <img class="hdr-logo" src="../assets/icon-64.png" alt="FBS Re" />
+      <div>
+        <div class="hdr-title">Save to SharePoint</div>
+        <div class="hdr-sub">FBS Reinsurance Limited</div>
+      </div>
+    </header>
+
+    <!-- Sign-in gate -->
+    <section id="authSection" class="card">
+      <p class="muted">Sign in with your FBS Re account to save attachments into SharePoint.</p>
+      <button id="signInBtn" class="btn btn-primary">Sign in</button>
+      <div id="signedInAs" class="signed-in hidden">
+        <span class="dot"></span><span id="userName"></span>
+        <button id="signOutBtn" class="linkbtn">Sign out</button>
+      </div>
+    </section>
+
+    <!-- Main flow (hidden until signed in) -->
+    <main id="mainSection" class="hidden">
+
+      <!-- Step 1: attachments -->
+      <section class="card">
+        <h2 class="step">1 · Choose attachments</h2>
+        <div id="attachList" class="att-list"><p class="muted">Loading attachments…</p></div>
+      </section>
+
+      <!-- Step 2: destination -->
+      <section class="card">
+        <h2 class="step">2 · Choose destination</h2>
+        <label class="lbl" for="siteSelect">Department site</label>
+        <select id="siteSelect" class="input"><option value="">Loading sites…</option></select>
+
+        <label class="lbl" for="librarySelect">Document library</label>
+        <select id="librarySelect" class="input" disabled><option value="">Pick a site first</option></select>
+
+        <label class="lbl" for="folderPath">Folder (optional)</label>
+        <input id="folderPath" class="input" type="text" placeholder="e.g. 2026/Treaty  — leave blank for the library root" />
+      </section>
+
+      <!-- Step 3: required details -->
+      <section class="card">
+        <h2 class="step">3 · Required details</h2>
+        <div id="metaForm" class="meta-form"><p class="muted">Pick a library to load its required fields.</p></div>
+      </section>
+
+      <!-- Save -->
+      <section class="card save-card">
+        <button id="saveBtn" class="btn btn-primary btn-block" disabled>Save to SharePoint</button>
+        <div id="status" class="status" role="status"></div>
+      </section>
+    </main>
+
+    <footer class="ftr">....For Better Services</footer>
+  </div>
+
+  <script src="authConfig.js"></script>
+  <script src="graph.js"></script>
+  <script src="taskpane.js"></script>
+</body>
+</html>

@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  FBS Re – Save to SharePoint (Outlook add-in manifest)
+
+  BEFORE DEPLOYING, replace every occurrence of:
+    https://YOUR-HOST            -> the HTTPS URL where you host the /src and /assets files
+                                    (e.g. https://fbsre.github.io/save-to-sharepoint
+                                     or   https://happy-rock-0a1b2c3.azurestaticapps.net)
+
+  The GUID below is this add-in's unique Id – keep it the same across updates,
+  change it only if you ever want a second, separate copy installed side by side.
+-->
+<OfficeApp
+  xmlns="http://schemas.microsoft.com/office/appforoffice/1.1"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0"
+  xmlns:mailappor="http://schemas.microsoft.com/office/mailappversionoverrides/1.0"
+  xsi:type="MailApp">
+
+  <Id>e3973525-8e95-45c5-82d5-a6095f5aa22f</Id>
+  <Version>1.0.0.0</Version>
+  <ProviderName>FBS Reinsurance Limited</ProviderName>
+  <DefaultLocale>en-US</DefaultLocale>
+  <DisplayName DefaultValue="Save to SharePoint"/>
+  <Description DefaultValue="Save email attachments straight into the correct FBS Re department document library, with the required details filled in."/>
+  <IconUrl DefaultValue="https://YOUR-HOST/assets/icon-64.png"/>
+  <HighResolutionIconUrl DefaultValue="https://YOUR-HOST/assets/icon-128.png"/>
+  <SupportUrl DefaultValue="https://YOUR-HOST/"/>
+
+  <!-- Only talk to Outlook/Exchange to read the current message + its attachments -->
+  <Hosts>
+    <Host Name="Mailbox"/>
+  </Hosts>
+
+  <Requirements>
+    <Sets>
+      <!-- 1.8 gives us getAttachmentContentAsync (read attachment bytes) -->
+      <Set Name="Mailbox" MinVersion="1.8"/>
+    </Sets>
+  </Requirements>
+
+  <FormSettings>
+    <Form xsi:type="ItemRead">
+      <DesktopSettings>
+        <SourceLocation DefaultValue="https://YOUR-HOST/src/taskpane.html"/>
+        <RequestedHeight>450</RequestedHeight>
+      </DesktopSettings>
+    </Form>
+  </FormSettings>
+
+  <Permissions>ReadItem</Permissions>
+
+  <Rule xsi:type="RuleCollection" Mode="Or">
+    <Rule xsi:type="ItemIs" ItemType="Message" FormType="Read"/>
+  </Rule>
+
+  <DisableEntityHighlighting>false</DisableEntityHighlighting>
+
+  <!-- Modern ribbon button (Outlook on the web, new Outlook, Microsoft 365 desktop, Mac) -->
+  <VersionOverrides xmlns="http://schemas.microsoft.com/office/mailappversionoverrides" xsi:type="VersionOverridesV1_0">
+    <Requirements>
+      <bt:Sets DefaultMinVersion="1.8">
+        <bt:Set Name="Mailbox"/>
+      </bt:Sets>
+    </Requirements>
+
+    <Hosts>
+      <Host xsi:type="MailHost">
+        <DesktopFormFactor>
+          <!-- Button shown when reading a message -->
+          <ExtensionPoint xsi:type="MessageReadCommandSurface">
+            <OfficeTab id="TabDefault">
+              <Group id="fbsReGroup">
+                <Label resid="groupLabel"/>
+                <Control xsi:type="Button" id="openSaveToSpoButton">
+                  <Label resid="buttonLabel"/>
+                  <Supertip>
+                    <Title resid="buttonLabel"/>
+                    <Description resid="buttonTip"/>
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="icon16"/>
+                    <bt:Image size="32" resid="icon32"/>
+                    <bt:Image size="80" resid="icon80"/>
+                  </Icon>
+                  <Action xsi:type="ShowTaskpane">
+                    <SourceLocation resid="taskpaneUrl"/>
+                  </Action>
+                </Control>
+              </Group>
+            </OfficeTab>
+          </ExtensionPoint>
+        </DesktopFormFactor>
+      </Host>
+    </Hosts>
+
+    <Resources>
+      <bt:Images>
+        <bt:Image id="icon16" DefaultValue="https://YOUR-HOST/assets/icon-16.png"/>
+        <bt:Image id="icon32" DefaultValue="https://YOUR-HOST/assets/icon-32.png"/>
+        <bt:Image id="icon80" DefaultValue="https://YOUR-HOST/assets/icon-80.png"/>
+      </bt:Images>
+      <bt:Urls>
+        <bt:Url id="taskpaneUrl" DefaultValue="https://YOUR-HOST/src/taskpane.html"/>
+      </bt:Urls>
+      <bt:ShortStrings>
+        <bt:String id="groupLabel" DefaultValue="FBS Re"/>
+        <bt:String id="buttonLabel" DefaultValue="Save to SharePoint"/>
+      </bt:ShortStrings>
+      <bt:LongStrings>
+        <bt:String id="buttonTip" DefaultValue="Save this email's attachments into the right FBS Re department library, with the required details."/>
+      </bt:LongStrings>
+    </Resources>
+  </VersionOverrides>
+</OfficeApp>
