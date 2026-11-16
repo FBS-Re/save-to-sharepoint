@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sign in — FBS Re</title>
+  <script src="https://appsforoffice.microsoft.com/lib/1.1/hosted/office.js"></script>
+  <script src="https://alcdn.msauth.net/browser/3.10.0/js/msal-browser.min.js"></script>
+  <script src="authConfig.js"></script>
+  <style>
+    body{font-family:'Segoe UI',Arial,Helvetica,sans-serif;color:#14264F;padding:28px;text-align:center}
+    .spin{display:inline-block;width:18px;height:18px;border:3px solid #c9d3e6;border-top-color:#1B3A6B;border-radius:50%;animation:sp .7s linear infinite;vertical-align:-3px;margin-right:8px}
+    @keyframes sp{to{transform:rotate(360deg)}}
+    .err{color:#c0392b}
+  </style>
+</head>
+<body>
+  <p id="m"><span class="spin"></span>Connecting to Microsoft sign-in…</p>
+  <script>
+    // Runs inside an Office dialog (a real window, so redirect-based sign-in works).
+    // On success it caches tokens in this origin's localStorage (shared with the
+    // task pane) and messages the parent task pane.
+    Office.onReady(function () {
+      var msg = document.getElementById("m");
+      function send(o) { try { Office.context.ui.messageParent(JSON.stringify(o)); } catch (e) {} }
+      (async function () {
+        try {
+          var redirectUri = window.location.origin + window.location.pathname; // this page
+          var pca = new msal.PublicClientApplication({
+            auth: {
+              clientId: window.FBS_AUTH.CLIENT_ID,
+              authority: "https://login.microsoftonline.com/" + window.FBS_AUTH.TENANT_ID,
+              redirectUri: redirectUri
+            },
+            cache: { cacheLocation: "localStorage", storeAuthStateInCookie: false }
+          });
+          await pca.initialize();
+
+          // Returning from the Microsoft redirect?
+          var resp = await pca.handleRedirectPromise();
+          if (resp && resp.account) {
+            pca.setActiveAccount(resp.account);
+            send({ status: "success", username: resp.account.username });
+            return;
+          }
+          // Already signed in (cache shared with task pane)?
+          var accts = pca.getAllAccounts();
+          if (accts.length) {
+            send({ status: "success", username: accts[0].username });
+            return;
+          }
+          // First load → start interactive sign-in.
+          msg.textContent = "Redirecting to Microsoft sign-in…";
+          await pca.loginRedirect({ scopes: window.FBS_AUTH.SCOPES, prompt: "select_account" });
+        } catch (e) {
+          msg.className = "err";
+          msg.textContent = "Sign-in error: " + (e && e.message ? e.message : e);
+          send({ status: "error", message: String(e && e.message ? e.message : e) });
+        }
+      })();
+    });
+  </script>
+</body>
+</html>
