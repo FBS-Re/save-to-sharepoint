@@ -2,8 +2,8 @@
 (function () {
   "use strict";
 
-  let msalApp = null;
   let account = null;
+  const tokenCache = {};   // scopeKey -> { token, expiresOn(ms) }
   let sites = [];
   let libraries = [];
   let requiredCols = [];
@@ -14,10 +14,7 @@
 
   Office.onReady(function (info) {
     if (info.host !== Office.HostType.Outlook) return;
-    // Wire the buttons FIRST so the UI always responds, even if MSAL is slow
-    // to load or the sign-in library is blocked by the network.
     wire();
-    initMsal();
   });
 
   function wire() {
@@ -28,77 +25,68 @@
     $("saveBtn").onclick = onSave;
   }
 
-  // Load the Microsoft sign-in library in the background. If it didn't load
-  // (e.g. the network blocked the CDN), say so clearly instead of failing silently.
-  async function initMsal() {
-    try {
-      if (typeof msal === "undefined" || !msal.PublicClientApplication) {
-        setStatus("Couldn't load the Microsoft sign-in library — your network may be blocking it. Please check your connection and reopen the add-in.", "err");
-        return;
-      }
-      msalApp = new msal.PublicClientApplication(window.FBS_MSAL_CONFIG);
-      await msalApp.initialize();
-      const accts = msalApp.getAllAccounts();
-      if (accts.length) { account = accts[0]; msalApp.setActiveAccount(account); onSignedIn(); }
-    } catch (e) {
-      setStatus("Sign-in setup failed: " + (e && e.message ? e.message : e), "err");
-    }
+  // ---------- auth ----------
+  // Sign-in runs in an Office dialog (auth-dialog.html), because pop-ups are
+  // blocked inside the task pane AND the dialog does not share storage with the
+  // task pane. So the dialog does the Microsoft sign-in and hands the access
+  // token straight back to us through messageParent; we keep it in memory here.
+  function signIn() {
+    setStatus('<span class="spin"></span>Opening sign-in…', "busy");
+    getToken(window.FBS_AUTH.SCOPES).then(function () {
+      setStatus("", "");
+      onSignedIn();
+    }).catch(function (e) {
+      setStatus("Sign-in failed: " + (e && e.message ? e.message : e), "err");
+    });
   }
 
-  // ---------- auth ----------
-  // Popups are blocked inside the Outlook add-in sandbox, so sign-in runs in an
-  // Office dialog (auth-dialog.html). It signs in, caches tokens in this same
-  // origin's localStorage, and messages us back; we then read the account here.
-  function signIn() {
-    if (!msalApp) {
-      setStatus("Sign-in is still getting ready — wait a second and click again. If this keeps happening, your network may be blocking the Microsoft sign-in library.", "err");
-      return;
-    }
-    setStatus('<span class="spin"></span>Opening sign-in…', "busy");
-    const base = window.location.href.split("?")[0].replace(/[^/]*$/, "");
-    const url = base + "auth-dialog.html";
-    Office.context.ui.displayDialogAsync(url, { height: 60, width: 30, promptBeforeOpen: false }, (res) => {
-      if (res.status !== Office.AsyncResultStatus.Succeeded) {
-        setStatus("Could not open the sign-in window: " + (res.error && res.error.message), "err");
-        return;
-      }
-      const dlg = res.value;
-      dlg.addEventHandler(Office.EventType.DialogMessageReceived, (arg) => {
-        let msg = {};
-        try { msg = JSON.parse(arg.message); } catch (e) {}
-        dlg.close();
-        if (msg.status === "success") {
-          const accts = msalApp.getAllAccounts();
-          if (accts.length) {
-            account = accts[0];
-            msalApp.setActiveAccount(account);
-            setStatus("", "");
-            onSignedIn();
-          } else {
-            setStatus("Signed in, but the session didn't carry over. Please try again.", "err");
-          }
-        } else {
-          setStatus("Sign-in failed: " + (msg.message || "unknown error"), "err");
+  // Open the sign-in dialog for a specific set of scopes and get a token back.
+  function openAuthDialog(scopes) {
+    return new Promise(function (resolve, reject) {
+      const base = window.location.href.split("?")[0].replace(/[^/]*$/, "");
+      const url = base + "auth-dialog.html?scopes=" + encodeURIComponent(scopes.join(" "));
+      Office.context.ui.displayDialogAsync(url, { height: 60, width: 30, promptBeforeOpen: false }, function (res) {
+        if (res.status !== Office.AsyncResultStatus.Succeeded) {
+          reject(new Error("Could not open the sign-in window: " + (res.error && res.error.message)));
+          return;
         }
-      });
-      dlg.addEventHandler(Office.EventType.DialogEventReceived, (arg) => {
-        if (arg.error === 12006) setStatus("Sign-in was cancelled.", ""); // closed by user
+        const dlg = res.value;
+        let settled = false;
+        dlg.addEventHandler(Office.EventType.DialogMessageReceived, function (arg) {
+          let msg = {};
+          try { msg = JSON.parse(arg.message); } catch (e) {}
+          settled = true;
+          dlg.close();
+          if (msg.status === "success" && msg.token) resolve(msg);
+          else reject(new Error(msg.message || "Sign-in failed"));
+        });
+        dlg.addEventHandler(Office.EventType.DialogEventReceived, function (arg) {
+          if (settled) return;
+          reject(new Error(arg.error === 12006 ? "Sign-in was cancelled." : "The sign-in window closed before finishing."));
+        });
       });
     });
   }
 
-  async function signOut() {
+  // Return an access token for the given scopes, reusing a cached one when valid.
+  function getToken(scopes) {
+    const key = scopes.join(" ");
+    const cached = tokenCache[key];
+    if (cached && cached.expiresOn - Date.now() > 60000) return Promise.resolve(cached.token);
+    return openAuthDialog(scopes).then(function (r) {
+      tokenCache[key] = { token: r.token, expiresOn: r.expiresOn || (Date.now() + 50 * 60000) };
+      if (r.username) account = { username: r.username };
+      return r.token;
+    });
+  }
+
+  function signOut() {
     account = null;
+    for (const k in tokenCache) delete tokenCache[k];
     $("mainSection").classList.add("hidden");
     $("signedInAs").classList.add("hidden");
     $("signInBtn").classList.remove("hidden");
-    try { await msalApp.clearCache(); } catch (e) {}
-  }
-
-  // All scopes are admin-consented, so a silent token always works after sign-in.
-  async function getToken(scopes) {
-    const r = await msalApp.acquireTokenSilent({ scopes, account });
-    return r.accessToken;
+    setStatus("", "");
   }
 
   async function onSignedIn() {
