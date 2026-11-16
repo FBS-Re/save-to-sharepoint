@@ -32,35 +32,55 @@
   }
 
   // ---------- auth ----------
-  async function signIn() {
-    try {
-      setStatus("", "");
-      const res = await msalApp.loginPopup({ scopes: window.FBS_AUTH.SCOPES, prompt: "select_account" });
-      account = res.account;
-      msalApp.setActiveAccount(account);
-      onSignedIn();
-    } catch (e) {
-      setStatus("Sign-in failed: " + e.message, "err");
-    }
+  // Popups are blocked inside the Outlook add-in sandbox, so sign-in runs in an
+  // Office dialog (auth-dialog.html). It signs in, caches tokens in this same
+  // origin's localStorage, and messages us back; we then read the account here.
+  function signIn() {
+    setStatus('<span class="spin"></span>Opening sign-in…', "busy");
+    const base = window.location.href.split("?")[0].replace(/[^/]*$/, "");
+    const url = base + "auth-dialog.html";
+    Office.context.ui.displayDialogAsync(url, { height: 60, width: 30, promptBeforeOpen: false }, (res) => {
+      if (res.status !== Office.AsyncResultStatus.Succeeded) {
+        setStatus("Could not open the sign-in window: " + (res.error && res.error.message), "err");
+        return;
+      }
+      const dlg = res.value;
+      dlg.addEventHandler(Office.EventType.DialogMessageReceived, (arg) => {
+        let msg = {};
+        try { msg = JSON.parse(arg.message); } catch (e) {}
+        dlg.close();
+        if (msg.status === "success") {
+          const accts = msalApp.getAllAccounts();
+          if (accts.length) {
+            account = accts[0];
+            msalApp.setActiveAccount(account);
+            setStatus("", "");
+            onSignedIn();
+          } else {
+            setStatus("Signed in, but the session didn't carry over. Please try again.", "err");
+          }
+        } else {
+          setStatus("Sign-in failed: " + (msg.message || "unknown error"), "err");
+        }
+      });
+      dlg.addEventHandler(Office.EventType.DialogEventReceived, (arg) => {
+        if (arg.error === 12006) setStatus("Sign-in was cancelled.", ""); // closed by user
+      });
+    });
   }
 
-  function signOut() {
-    const a = account;
+  async function signOut() {
     account = null;
     $("mainSection").classList.add("hidden");
     $("signedInAs").classList.add("hidden");
     $("signInBtn").classList.remove("hidden");
-    if (a) msalApp.logoutPopup({ account: a }).catch(() => {});
+    try { await msalApp.clearCache(); } catch (e) {}
   }
 
+  // All scopes are admin-consented, so a silent token always works after sign-in.
   async function getToken(scopes) {
-    try {
-      const r = await msalApp.acquireTokenSilent({ scopes, account });
-      return r.accessToken;
-    } catch (e) {
-      const r = await msalApp.acquireTokenPopup({ scopes });
-      return r.accessToken;
-    }
+    const r = await msalApp.acquireTokenSilent({ scopes, account });
+    return r.accessToken;
   }
 
   async function onSignedIn() {
