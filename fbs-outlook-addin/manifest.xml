@@ -1,14 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
   FBS Re – Save to SharePoint (Outlook add-in manifest)
-
-  BEFORE DEPLOYING, replace every occurrence of:
-    https://YOUR-HOST            -> the HTTPS URL where you host the /src and /assets files
-                                    (e.g. https://fbsre.github.io/save-to-sharepoint
-                                     or   https://happy-rock-0a1b2c3.azurestaticapps.net)
-
-  The GUID below is this add-in's unique Id – keep it the same across updates,
-  change it only if you ever want a second, separate copy installed side by side.
+  Hosted on GitHub Pages: https://fbs-re.github.io/save-to-sharepoint/fbs-outlook-addin
+  Id GUID is stable across updates.
 -->
 <OfficeApp
   xmlns="http://schemas.microsoft.com/office/appforoffice/1.1"
@@ -23,18 +17,16 @@
   <DefaultLocale>en-US</DefaultLocale>
   <DisplayName DefaultValue="Save to SharePoint"/>
   <Description DefaultValue="Save email attachments straight into the correct FBS Re department document library, with the required details filled in."/>
-  <IconUrl DefaultValue="https://YOUR-HOST/assets/icon-64.png"/>
-  <HighResolutionIconUrl DefaultValue="https://YOUR-HOST/assets/icon-128.png"/>
-  <SupportUrl DefaultValue="https://YOUR-HOST/"/>
+  <IconUrl DefaultValue="https://fbs-re.github.io/save-to-sharepoint/fbs-outlook-addin/assets/icon-64.png"/>
+  <HighResolutionIconUrl DefaultValue="https://fbs-re.github.io/save-to-sharepoint/fbs-outlook-addin/assets/icon-128.png"/>
+  <SupportUrl DefaultValue="https://fbs-re.github.io/save-to-sharepoint/fbs-outlook-addin/"/>
 
-  <!-- Only talk to Outlook/Exchange to read the current message + its attachments -->
   <Hosts>
     <Host Name="Mailbox"/>
   </Hosts>
 
   <Requirements>
     <Sets>
-      <!-- 1.8 gives us getAttachmentContentAsync (read attachment bytes) -->
       <Set Name="Mailbox" MinVersion="1.8"/>
     </Sets>
   </Requirements>
@@ -42,7 +34,7 @@
   <FormSettings>
     <Form xsi:type="ItemRead">
       <DesktopSettings>
-        <SourceLocation DefaultValue="https://YOUR-HOST/src/taskpane.html"/>
+        <SourceLocation DefaultValue="https://fbs-re.github.io/save-to-sharepoint/fbs-outlook-addin/src/taskpane.html"/>
         <RequestedHeight>450</RequestedHeight>
       </DesktopSettings>
     </Form>
@@ -56,7 +48,6 @@
 
   <DisableEntityHighlighting>false</DisableEntityHighlighting>
 
-  <!-- Modern ribbon button (Outlook on the web, new Outlook, Microsoft 365 desktop, Mac) -->
   <VersionOverrides xmlns="http://schemas.microsoft.com/office/mailappversionoverrides" xsi:type="VersionOverridesV1_0">
     <Requirements>
       <bt:Sets DefaultMinVersion="1.8">
@@ -67,7 +58,6 @@
     <Hosts>
       <Host xsi:type="MailHost">
         <DesktopFormFactor>
-          <!-- Button shown when reading a message -->
           <ExtensionPoint xsi:type="MessageReadCommandSurface">
             <OfficeTab id="TabDefault">
               <Group id="fbsReGroup">
@@ -96,12 +86,12 @@
 
     <Resources>
       <bt:Images>
-        <bt:Image id="icon16" DefaultValue="https://YOUR-HOST/assets/icon-16.png"/>
-        <bt:Image id="icon32" DefaultValue="https://YOUR-HOST/assets/icon-32.png"/>
-        <bt:Image id="icon80" DefaultValue="https://YOUR-HOST/assets/icon-80.png"/>
+        <bt:Image id="icon16" DefaultValue="https://fbs-re.github.io/save-to-sharepoint/fbs-outlook-addin/assets/icon-16.png"/>
+        <bt:Image id="icon32" DefaultValue="https://fbs-re.github.io/save-to-sharepoint/fbs-outlook-addin/assets/icon-32.png"/>
+        <bt:Image id="icon80" DefaultValue="https://fbs-re.github.io/save-to-sharepoint/fbs-outlook-addin/assets/icon-80.png"/>
       </bt:Images>
       <bt:Urls>
-        <bt:Url id="taskpaneUrl" DefaultValue="https://YOUR-HOST/src/taskpane.html"/>
+        <bt:Url id="taskpaneUrl" DefaultValue="https://fbs-re.github.io/save-to-sharepoint/fbs-outlook-addin/src/taskpane.html"/>
       </bt:Urls>
       <bt:ShortStrings>
         <bt:String id="groupLabel" DefaultValue="FBS Re"/>
