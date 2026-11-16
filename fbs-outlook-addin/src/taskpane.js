@@ -12,9 +12,15 @@
 
   const $ = (id) => document.getElementById(id);
 
+  const SESSION_KEY = "fbs_spo_session";
+
   Office.onReady(function (info) {
     if (info.host !== Office.HostType.Outlook) return;
     wire();
+    // When the pane is pinned, reload for whichever email the user moves to.
+    try { Office.context.mailbox.addHandlerAsync(Office.EventType.ItemChanged, onItemChanged); } catch (e) {}
+    // Restore a previous sign-in so the user isn't asked to sign in again on reopen.
+    restoreSession();
   });
 
   function wire() {
@@ -76,6 +82,7 @@
     return openAuthDialog(scopes).then(function (r) {
       tokenCache[key] = { token: r.token, expiresOn: r.expiresOn || (Date.now() + 50 * 60000) };
       if (r.username) account = { username: r.username };
+      persistSession();
       return r.token;
     });
   }
@@ -83,10 +90,41 @@
   function signOut() {
     account = null;
     for (const k in tokenCache) delete tokenCache[k];
+    clearSession();
     $("mainSection").classList.add("hidden");
     $("signedInAs").classList.add("hidden");
     $("signInBtn").classList.remove("hidden");
     setStatus("", "");
+  }
+
+  // ---------- session persistence ----------
+  // Remember the signed-in account + tokens so the user stays signed in when the
+  // pane is reopened (e.g. after moving to another email), until the token expires.
+  function persistSession() {
+    try { localStorage.setItem(SESSION_KEY, JSON.stringify({ account: account, tokenCache: tokenCache })); } catch (e) {}
+  }
+  function clearSession() {
+    try { localStorage.removeItem(SESSION_KEY); } catch (e) {}
+  }
+  function restoreSession() {
+    try {
+      const raw = localStorage.getItem(SESSION_KEY);
+      if (!raw) return;
+      const data = JSON.parse(raw);
+      const key = window.FBS_AUTH.SCOPES.join(" ");
+      const cached = data.tokenCache && data.tokenCache[key];
+      if (data.account && cached && cached.token && cached.expiresOn - Date.now() > 60000) {
+        account = data.account;
+        Object.keys(data.tokenCache).forEach(function (k) { tokenCache[k] = data.tokenCache[k]; });
+        onSignedIn();
+      }
+    } catch (e) {}
+  }
+
+  // Fired when the user selects a different email while the pane is pinned open.
+  function onItemChanged() {
+    if (!account) return;
+    try { loadAttachments(); } catch (e) {}
   }
 
   async function onSignedIn() {
