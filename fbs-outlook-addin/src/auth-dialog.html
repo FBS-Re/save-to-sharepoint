@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Sign in — FBS Re</title>
   <script src="https://appsforoffice.microsoft.com/lib/1.1/hosted/office.js"></script>
-  <script src="https://alcdn.msauth.net/browser/3.10.0/js/msal-browser.min.js"></script>
-  <script src="authConfig.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3.10.0/lib/msal-browser.min.js"></script>
+  <script src="authConfig.js?v=3"></script>
   <style>
     body{font-family:'Segoe UI',Arial,Helvetica,sans-serif;color:#14264F;padding:28px;text-align:center}
     .spin{display:inline-block;width:18px;height:18px;border:3px solid #c9d3e6;border-top-color:#1B3A6B;border-radius:50%;animation:sp .7s linear infinite;vertical-align:-3px;margin-right:8px}
@@ -25,6 +25,12 @@
       function send(o) { try { Office.context.ui.messageParent(JSON.stringify(o)); } catch (e) {} }
       (async function () {
         try {
+          if (typeof msal === "undefined" || !msal.PublicClientApplication) {
+            msg.className = "err";
+            msg.textContent = "Couldn't load the Microsoft sign-in library. Your network may be blocking it.";
+            send({ status: "error", message: "MSAL library failed to load" });
+            return;
+          }
           var redirectUri = window.location.origin + window.location.pathname; // this page
           var pca = new msal.PublicClientApplication({
             auth: {
